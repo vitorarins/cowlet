@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"time"
 )
 
@@ -50,7 +49,6 @@ type DeviceRoot struct {
 	Device Device `json:"device"`
 }
 
-// TODO: Make multiple properties for each value type?
 type Property struct {
 	Key         int       `json:"key"`
 	BaseType    string    `json:"base_type"`
@@ -64,6 +62,30 @@ type FlexValue string
 
 type FlexTime struct {
 	time.Time
+}
+
+type RealTimeVitals struct {
+	OxygenSaturation    int    `json:"ox"`
+	HeartRate           int    `json:"hr"`
+	BatteryPercentage   int    `json:"bat"`
+	BatteryMinutes      int    `json:"btt"`
+	SignalStrength      int    `json:"rsi"`
+	OxygenTenAV         int    `json:"oxta"`
+	SockConnection      int    `json:"sc"`
+	SkinTemperature     int    `json:"st"`
+	Movement            int    `json:"mv"`
+	AlertPausedStatus   int    `json:"aps"`
+	Charging            int    `json:"chg"`
+	AlertsMask          int    `json:"alrt"`
+	UpdateStatus        int    `json:"ota"`
+	ReadingFlags        int    `json:"srf"`
+	BrickStatus         int    `json:"sb"`
+	MovementBucket      int    `json:"mvb"`
+	WellnessAlert       int    `json:"onm"`
+	MonitoringStartTime int    `json:"mst"`
+	BaseBatteryStatus   int    `json:"bsb"`
+	BaseStationOn       int    `json:"bso"`
+	HardwareVersion     string `json:"hw"`
 }
 
 func (fv *FlexValue) UnmarshalJSON(b []byte) error {
@@ -202,14 +224,6 @@ func (c *Client) authenticate() error {
 	return nil
 }
 
-func logRequest(req *http.Request) {
-	dump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		fmt.Println("Error dumping request details:", err)
-	}
-	fmt.Printf("Outgoing request:\n%s\nEnd request\n", string(dump))
-}
-
 func (c *Client) Post(subdomain, endpoint string, data interface{}, v interface{}) error {
 	return c.MakeRequest("POST", subdomain, endpoint, data, v)
 }
@@ -253,8 +267,6 @@ func (c *Client) doWithAuthorization(method, subdomain, endpoint string, data, v
 		return nil, err
 	}
 
-	logRequest(req)
-
 	return c.implementationClient.Do(req)
 }
 
@@ -280,6 +292,24 @@ func (c *Client) GetDevices() ([]Device, error) {
 		devices[i] = v.Device
 	}
 	return devices, nil
+}
+
+func (c *Client) GetRealTimeVitals(deviceID string) (*RealTimeVitals, error) {
+	realTimeVitalsProp, err := c.GetPropertyByName(deviceID, "REAL_TIME_VITALS")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get property REAL_TIME_VITALS: %w", err)
+	}
+
+	if realTimeVitalsProp == nil {
+		return nil, fmt.Errorf("the property for REAL_TIME_VITALS is nil")
+	}
+
+	realTimeVitals := &RealTimeVitals{}
+	if err := json.Unmarshal(json.RawMessage(realTimeVitalsProp.Value), realTimeVitals); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal value from REAL_TIME_VITALS property: %w", err)
+	}
+
+	return realTimeVitals, nil
 }
 
 func (c *Client) GetPropertyByName(deviceID, name string) (*Property, error) {
@@ -316,11 +346,10 @@ func (c *Client) SetAppActiveStatus(deviceID string) (bool, error) {
 	}
 
 	respDP := &datapointRequest{}
-	err := c.Post(AdsFieldSubdomain, endpoint, reqDP, respDP)
-	if err != nil {
+	if err := c.Post(AdsFieldSubdomain, endpoint, reqDP, respDP); err != nil {
 		return false, err
 	}
-	fmt.Printf("%+v\n", respDP)
+
 	return true, nil
 }
 

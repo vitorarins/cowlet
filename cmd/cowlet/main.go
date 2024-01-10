@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"math"
-	"os"
 	"time"
 
 	"github.com/vitorarins/cowlet/pkg/client"
@@ -44,48 +42,16 @@ func main() {
 		return
 	}
 
-	// Log out to file instead of new one each day.
-	file, err := os.OpenFile("owlet_data.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Printf("Failed to create file. %s\n", err)
-		return
-	}
-	defer file.Close()
-
 	attempts := 1
-	propAttempts := 1
 	for {
-		properties, err := client.GetProperties(client.Device.DSN)
-		if err != nil || properties == nil {
-			propAttempts = backoff(fmt.Sprintf("Failed to get properties for %s. %+v\n", client.Device.DSN, err), propAttempts)
-			continue
-		}
-		propAttempts = 1
-
-		props_json, err := json.Marshal(properties)
+		realTimeVitals, err := client.GetRealTimeVitals(client.Device.DSN)
 		if err != nil {
-			fmt.Printf("Failed to unmarshal properties for %s. %+v\n", client.Device.DSN, err)
+			attempts = backoff(fmt.Sprintf("Failed to get properties for %s. %+v\n", client.Device.DSN, err), attempts)
 			continue
 		}
-
-		// Append to our file.
-		fmt.Fprintf(file, "%s\n", string(props_json))
-
-		_, ok := properties["REAL_TIME_VITALS"]
-		if !ok {
-			attempts = backoff(fmt.Sprintf("Backing off due to REAL_TIME_VITALS"), attempts)
-			continue
-
-		}
-
 		attempts = 1
 
-		// STDOUT logging of specific stats.
-		fmt.Printf("%+v\n", properties["REAL_TIME_VITALS"])
-		fmt.Printf("%+v\n", properties["BASE_STATION_ON"])
-		fmt.Printf("%+v\n", properties["BATT_LEVEL"])
-		fmt.Printf("%+v\n", properties["OXYGEN_LEVEL"])
-		fmt.Printf("%+v\n", properties["HEART_RATE"])
+		fmt.Printf("%+v\n", *realTimeVitals)
 
 		_, err = client.SetAppActiveStatus(client.Device.DSN)
 		if err != nil {
