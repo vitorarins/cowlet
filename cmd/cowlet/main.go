@@ -4,8 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"math"
+	"net/http"
+	"os"
 	"time"
 
+	"github.com/kouhin/envflag"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/vitorarins/cowlet/internal/metrics"
 	"github.com/vitorarins/cowlet/pkg/client"
 )
 
@@ -28,7 +35,14 @@ func main() {
 	email := flag.String("email", "", "User's email")
 	password := flag.String("password", "", "User's password")
 
-	flag.Parse()
+	metricsAddress := flag.String("metrics-address", ":9190", "Address used for the metrics service")
+
+	if err := envflag.Parse(); err != nil {
+		fmt.Printf("Could not parse flags: %v", err)
+		os.Exit(1)
+	}
+
+	metrics := startMetrics(*metricsAddress)
 
 	client, err := client.New(*email, *password)
 	if err != nil {
@@ -42,6 +56,8 @@ func main() {
 		return
 	}
 
+	fmt.Println("Serving metrics...")
+
 	attempts := 1
 	for {
 		realTimeVitals, err := client.GetRealTimeVitals(client.Device.DSN)
@@ -51,7 +67,7 @@ func main() {
 		}
 		attempts = 1
 
-		fmt.Printf("%+v\n", *realTimeVitals)
+		metrics.OxygenSaturationSet(realTimeVitals.OxygenSaturation)
 
 		_, err = client.SetAppActiveStatus(client.Device.DSN)
 		if err != nil {
@@ -60,4 +76,28 @@ func main() {
 
 		time.Sleep(2 * time.Second)
 	}
+}
+
+func startMetrics(metricsAddress string) metrics.Metrics {
+	reg := prometheus.NewRegistry()
+
+	metrics := metrics.New(reg)
+
+	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+
+	go func() {
+		server := &http.Server{
+			Addr: metricsAddress,
+			// prevents DOS attacks according to
+			// https://deepsource.io/directory/analyzers/go/issues/GO-S2114
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+		if err := server.ListenAndServe(); err != nil {
+			fmt.Printf("Prometheus stopped serving metrics: %v\n", err)
+
+			return
+		}
+	}()
+
+	return metrics
 }

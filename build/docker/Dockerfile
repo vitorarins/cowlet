@@ -1,0 +1,18 @@
+ARG GO_MODULE_NAME=github.com/vitorarins/cowlet
+
+### Prepare the build image
+FROM golang:1.20 as build
+ARG GO_MODULE_NAME
+
+WORKDIR /go/src/${GO_MODULE_NAME}
+COPY . ./
+RUN make
+
+### Build the target image
+FROM scratch
+ARG GO_MODULE_NAME
+
+COPY --from=build /go/src/${GO_MODULE_NAME}/cmd/cowlet/cowlet .
+
+CMD ["./cowlet"]
+
