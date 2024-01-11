@@ -31,11 +31,16 @@ func backoff(msg string, attempt int) int {
 	return attempt
 }
 
+func entrypointHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "User request received!")
+}
+
 func main() {
 	email := flag.String("email", "", "User's email")
 	password := flag.String("password", "", "User's password")
 
-	metricsAddress := flag.String("metrics-address", ":9190", "Address used for the metrics service")
+	httpAddress := flag.String("http-address", ":8000", "Address used for the service")
+	metricsAddress := flag.String("metrics-address", ":8080", "Address used for the metrics service")
 
 	if err := envflag.Parse(); err != nil {
 		fmt.Printf("Could not parse flags: %v", err)
@@ -57,6 +62,19 @@ func main() {
 	}
 
 	fmt.Println("Serving metrics...")
+
+	entrypointMux := http.NewServeMux()
+	entrypointMux.HandleFunc("/", entrypointHandler)
+	entrypointMux.HandleFunc("/startup", entrypointHandler)
+	entrypointMux.HandleFunc("/liveness", entrypointHandler)
+
+	go func() {
+		if err := http.ListenAndServe(*httpAddress, entrypointMux); err != nil {
+			fmt.Printf("Prometheus stopped serving metrics: %v\n", err)
+
+			return
+		}
+	}()
 
 	attempts := 1
 	for {
