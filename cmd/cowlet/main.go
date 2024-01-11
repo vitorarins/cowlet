@@ -86,6 +86,22 @@ func main() {
 		attempts = 1
 
 		metrics.OxygenSaturationSet(realTimeVitals.OxygenSaturation)
+		metrics.HeartRateSet(realTimeVitals.HeartRate)
+		metrics.BatteryPercentageSet(realTimeVitals.BatteryPercentage)
+		metrics.BatteryMinutesSet(realTimeVitals.BatteryMinutes)
+		metrics.SignalStrengthSet(realTimeVitals.SignalStrength)
+		metrics.OxygenTenAVSet(realTimeVitals.OxygenTenAV)
+		metrics.SockConnectionSet(realTimeVitals.SockConnection)
+		metrics.SleepStateSet(realTimeVitals.SleepState)
+		metrics.SkinTemperatureSet(realTimeVitals.SkinTemperature)
+		metrics.MovementSet(realTimeVitals.Movement)
+		metrics.AlertPausedStatusSet(realTimeVitals.AlertPausedStatus)
+		metrics.ChargingSet(realTimeVitals.Charging)
+		metrics.MovementBucketSet(realTimeVitals.MovementBucket)
+		metrics.WellnessAlertSet(realTimeVitals.WellnessAlert)
+		metrics.MonitoringStartTimeSet(realTimeVitals.MonitoringStartTime)
+		metrics.BaseBatteryStatusSet(realTimeVitals.BaseBatteryStatus)
+		metrics.BaseStationOnSet(realTimeVitals.BaseStationOn)
 
 		_, err = client.SetAppActiveStatus(client.Device.DSN)
 		if err != nil {

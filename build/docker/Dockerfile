@@ -12,6 +12,7 @@ RUN make
 FROM scratch
 ARG GO_MODULE_NAME
 
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /go/src/${GO_MODULE_NAME}/cmd/cowlet/cowlet .
 
 CMD ["./cowlet"]

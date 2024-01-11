@@ -72,6 +72,7 @@ type RealTimeVitals struct {
 	SignalStrength      int    `json:"rsi"`
 	OxygenTenAV         int    `json:"oxta"`
 	SockConnection      int    `json:"sc"`
+	SleepState          int    `json:"ss"`
 	SkinTemperature     int    `json:"st"`
 	Movement            int    `json:"mv"`
 	AlertPausedStatus   int    `json:"aps"`
