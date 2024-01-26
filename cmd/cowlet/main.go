@@ -16,21 +16,6 @@ import (
 	"github.com/vitorarins/cowlet/pkg/client"
 )
 
-func backoff(msg string, attempt int) int {
-	maxAttempts := 20
-	backoff_time := math.Pow(2.0, float64(attempt))
-	fmt.Printf("Backing off for %.2f milliseconds. Attempt %d of %d\n", backoff_time, attempt, maxAttempts)
-	fmt.Printf("msg: %s\n", msg)
-
-	if attempt >= maxAttempts {
-		attempt = maxAttempts - 1
-	}
-
-	time.Sleep(time.Duration(backoff_time) * time.Millisecond)
-	attempt++
-	return attempt
-}
-
 func entrypointHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "User request received!")
 }
@@ -76,14 +61,27 @@ func main() {
 		}
 	}()
 
-	attempts := 1
+	maxAttempts := 20
+	attempt := 1
 	for {
 		realTimeVitals, err := client.GetRealTimeVitals(client.Device.DSN)
 		if err != nil {
-			attempts = backoff(fmt.Sprintf("Failed to get properties for %s. %+v\n", client.Device.DSN, err), attempts)
+			fmt.Printf("Failed to get properties for %s. %+v\n", client.Device.DSN, err)
+
+			if attempt > maxAttempts {
+				os.Exit(1)
+			}
+
+			backoff_time := math.Pow(2.0, float64(attempt))
+
+			fmt.Printf("Backing off for %.2f milliseconds. Attempt %d of %d\n", backoff_time, attempt, maxAttempts)
+
+			time.Sleep(time.Duration(backoff_time) * time.Millisecond)
+			attempt++
+
 			continue
 		}
-		attempts = 1
+		attempt = 1
 
 		metrics.OxygenSaturationSet(realTimeVitals.OxygenSaturation)
 		metrics.HeartRateSet(realTimeVitals.HeartRate)

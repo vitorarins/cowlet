@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -258,7 +258,7 @@ func (c *Client) MakeRequest(method, subdomain, endpoint string, data interface{
 		return fmt.Errorf("request failed with status: %d", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	return json.Unmarshal(body, v)
 }
 
@@ -445,7 +445,7 @@ func (c *Client) tokenSignIn(miniToken string) error {
 		return fmt.Errorf("request failed with status %d", resp.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read token signin response: %w", err)
 	}
@@ -500,7 +500,13 @@ func (c *Client) refreshAuth() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("request failed with status %d", resp.StatusCode)
+
+		errorMessage, err := io.ReadAll(resp.Body)
+		if err != nil {
+			errorMessage = []byte(fmt.Sprintf("failed to read response body: %v", err))
+		}
+
+		return fmt.Errorf("refresh token failed with status %d and error message: %s", resp.StatusCode, errorMessage)
 	}
 
 	dict := map[string]string{}
