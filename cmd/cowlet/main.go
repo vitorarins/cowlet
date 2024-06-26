@@ -61,7 +61,7 @@ func main() {
 		}
 	}()
 
-	maxAttempts := 20
+	maxAttempts := 5
 	attempt := 1
 	for {
 		realTimeVitals, err := client.GetRealTimeVitals(client.Device.DSN)
