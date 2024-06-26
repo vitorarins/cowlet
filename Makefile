@@ -1,5 +1,5 @@
 TARGETS:=$(shell ls -d cmd/* 2>/dev/null)
-VERSION:=test
+VERSION:=latest
 
 CGO:=CGO_ENABLED=0
 GO_LDFLAGS:=-w -s -extldflags '-static'
