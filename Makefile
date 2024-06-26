@@ -4,7 +4,7 @@ VERSION:=test
 CGO:=CGO_ENABLED=0
 GO_LDFLAGS:=-w -s -extldflags '-static'
 
-REGISTRY:=gcr.io
+REGISTRY:=vitorarins
 
 TAG:=$(REGISTRY)/cowlet:$(VERSION)
 
